@@ -8,9 +8,9 @@
 seed: 42
 # the size of each batch of images when training
 # careful not to use a too large batch size, might lead to OOM errors
-batch_size: 32
+batch_size: 10 # 32
 # the number of epochs to train for
-epochs: 10 #90
+epochs: 90
 # the learning rate
 lr: 0.001
 # the path to the root directory of the dataset

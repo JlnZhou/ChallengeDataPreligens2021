@@ -73,6 +73,18 @@ if __name__ == '__main__':
         tf.random.set_seed(config.seed)
 
     N_CPUS = multiprocessing.cpu_count()
+    # Ajouts
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+      try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+          tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+      except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
 
     print('Instanciate train and validation datasets')
     train_files = list(config.dataset_folder.glob('train/images/*.tif'))
@@ -131,7 +143,7 @@ if __name__ == '__main__':
         ),
         # tf.keras.callbacks.EarlyStopping(patience=10, verbose=1),
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=xp_dir/'checkpoints/epoch{epoch}', save_best_only=False, verbose=1
+            filepath=str(xp_dir/'checkpoints/epoch{epoch}'), save_best_only=False, verbose=1
         ),
         tf.keras.callbacks.CSVLogger(
             filename=(xp_dir/'fit_logs.csv')
