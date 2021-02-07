@@ -182,6 +182,13 @@ if __name__ == '__main__':
                   #            tf.keras.metrics.Recall(),
                   #            tf.keras.metrics.MeanIoU(num_classes=LCD.N_CLASSES)]) # TODO segmentation metrics
 
+    # Load ModelCheckpoint
+    # Load model
+    xp_name = '06-02-2021_17-38-57'
+    checkpoint_epoch = 10
+    xp_dir_cp = config.xp_rootdir/xp_name
+    model = tf.keras.models.load_model(str(xp_dir_cp/f'checkpoints/epoch{checkpoint_epoch}'))
+    
     # Launch training
     model_history = model.fit(train_dataset, epochs=config.epochs,
                               callbacks=callbacks,
