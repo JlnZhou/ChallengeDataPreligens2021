@@ -163,14 +163,24 @@ if __name__ == '__main__':
     print(f"Creating U-Net with arguments: {unet_kwargs}")
     model = UNet(**unet_kwargs)
     print(model.summary())
+    
+    # Load ModelCheckpoint
+    # Load model
+    xp_name = '08-02-2021_13-41-06'
+    checkpoint_epoch = 10
+    xp_dir_cp = config.xp_rootdir/xp_name
+    model = tf.keras.models.load_model(str(xp_dir_cp/f'checkpoints/epoch{checkpoint_epoch}'))
 
     # get optimizer, loss, and compile model for training
     optimizer = tf.keras.optimizers.Adam(lr=config.lr)
 
     # compute class weights for the loss: inverse-frequency balanced
     # note: we set to 0 the weights for the classes "no_data"(0) and "clouds"(1) to ignore these
-    class_weight = (1 / LCD.TRAIN_CLASS_COUNTS[2:])* LCD.TRAIN_CLASS_COUNTS[2:].sum() / (LCD.N_CLASSES-2)
+    class_weight = LCD.TRAIN_CLASS_COUNTS
+    class_weight[LCD.IGNORED_CLASSES_IDX] = 1.
+    class_weight = (1 / class_weight)* (LCD.TRAIN_CLASS_COUNTS.sum() - LCD.TRAIN_CLASS_COUNTS[LCD.IGNORED_CLASSES_IDX].sum()) / (LCD.N_CLASSES-len(LCD.IGNORED_CLASSES_IDX))
     class_weight[LCD.IGNORED_CLASSES_IDX] = 0.
+    class_weight = dict(enumerate(class_weight))
     print(f"Will use class weights: {class_weight}")
 
     loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
@@ -181,13 +191,6 @@ if __name__ == '__main__':
                   # metrics = [tf.keras.metrics.Precision(),
                   #            tf.keras.metrics.Recall(),
                   #            tf.keras.metrics.MeanIoU(num_classes=LCD.N_CLASSES)]) # TODO segmentation metrics
-
-    # Load ModelCheckpoint
-    # Load model
-    xp_name = '06-02-2021_17-38-57'
-    checkpoint_epoch = 10
-    xp_dir_cp = config.xp_rootdir/xp_name
-    model = tf.keras.models.load_model(str(xp_dir_cp/f'checkpoints/epoch{checkpoint_epoch}'))
     
     # Launch training
     model_history = model.fit(train_dataset, epochs=config.epochs,
