@@ -166,7 +166,7 @@ if __name__ == '__main__':
     
     # Load ModelCheckpoint
     # Load model
-    xp_name = '08-02-2021_13-41-06'
+    xp_name = '09-02-2021_12-02-16'
     checkpoint_epoch = 10
     xp_dir_cp = config.xp_rootdir/xp_name
     model = tf.keras.models.load_model(str(xp_dir_cp/f'checkpoints/epoch{checkpoint_epoch}'))
