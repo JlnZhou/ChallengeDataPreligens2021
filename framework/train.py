@@ -7,6 +7,7 @@ import argparse
 import yaml
 import random
 import numpy as np
+from tqdm import tqdm
 import pandas as pd
 import tensorflow as tf
 
@@ -59,6 +60,39 @@ def _parse_args():
         assert config.val_samples_csv.is_file()
 
     return config
+    
+def predict_as_vectors_train(dataset, class_weight, steps=None):
+    """Perform a forward pass over the dataset and bincount the prediction masks to return class vectors.
+    Args:
+        dataset (tf.data.Dataset): dataset to perform inference on
+        class_weight: weights of classes
+        steps (int, optional): the total number of steps (batches) in the dataset, used for the progress bar
+    Returns:
+        (pandas.DataFrame): predicted class distribution vectors for the dataset
+    """
+    def bincount_along_axis(arr, minlength=None, axis=-1):
+        """Bincounts a tensor along an axis"""
+        if minlength is None:
+            minlength = tf.reduce_max(arr) + 1
+        mask = tf.equal(arr[..., None], tf.range(minlength, dtype=arr.dtype))
+        return tf.math.count_nonzero(mask, axis=axis-1 if axis < 0 else axis)
+
+    predictions = []
+    for batch in tqdm(dataset):#, total=steps):
+        image, mask = batch
+        # predict a raster for each sample in the batch
+        pred_raster = mask
+
+        (batch_size, _, _, num_classes) = tuple(pred_raster.shape)
+        pred_mask = tf.argmax(pred_raster, -1) # (bs, 256, 256)
+        # bincount for each sample
+        counts = bincount_along_axis(
+            tf.reshape(pred_mask, (batch_size, -1)), minlength=num_classes, axis=-1
+        )
+        predictions.append(counts / tf.math.reduce_sum(counts, -1, keepdims=True))
+
+    predictions = tf.concat(np.sum(predictions * class_weight), 0)
+    return predictions.numpy()
 
 if __name__ == '__main__':
 
@@ -166,7 +200,7 @@ if __name__ == '__main__':
     
     # Load ModelCheckpoint
     # Load model
-    xp_name = '09-02-2021_12-02-16'
+    xp_name = '10-02-2021_12-06-19'
     checkpoint_epoch = 10
     xp_dir_cp = config.xp_rootdir/xp_name
     model = tf.keras.models.load_model(str(xp_dir_cp/f'checkpoints/epoch{checkpoint_epoch}'))
@@ -182,6 +216,7 @@ if __name__ == '__main__':
     class_weight[LCD.IGNORED_CLASSES_IDX] = 0.
     class_weight = dict(enumerate(class_weight))
     print(f"Will use class weights: {class_weight}")
+    sample_weight = predict_as_vectors_train(train_dataset, class_weight, trainset_size // config.batch_size)
 
     loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
     print("Compile model")
@@ -198,6 +233,7 @@ if __name__ == '__main__':
                               steps_per_epoch=trainset_size // config.batch_size,
                               validation_data=val_dataset,
                               validation_steps=valset_size // config.batch_size,
+                              sample_weight = sample_weight
                               # class_weight=class_weight
                               )
 
