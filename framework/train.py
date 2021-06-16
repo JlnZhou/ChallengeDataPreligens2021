@@ -78,7 +78,7 @@ def predict_as_vectors_train(dataset, class_weight, steps=None):
         return tf.math.count_nonzero(mask, axis=axis-1 if axis < 0 else axis)
 
     predictions = []
-    for batch in tqdm(dataset):#, total=steps):
+    for batch in tqdm(dataset, total=steps):
         image, mask = batch
         # predict a raster for each sample in the batch
         pred_raster = mask
